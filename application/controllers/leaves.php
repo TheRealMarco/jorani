@@ -83,18 +83,12 @@ class Leaves extends CI_Controller {
     
     /**
      * Display the details of leaves taken/entitled for the connected user
-     * @param string $refTmp Timestamp (reference date)
      * @author Benjamin BALET <benjamin.balet@gmail.com>
      */
-    public function counters($refTmp = NULL) {
+    public function counters() {
         $this->auth->check_is_granted('counters_leaves');
         $data = $this->getUserContext();
-        $refDate = date("Y-m-d");
-        if ($refTmp != NULL) {
-            $refDate = date("Y-m-d", $refTmp);
-        }
-        $data['refDate'] = $refDate;
-        $data['summary'] = $this->leaves_model->get_user_leaves_summary($this->user_id, FALSE, $refDate);
+        $data['summary'] = $this->leaves_model->get_user_leaves_summary($this->user_id);
 
         if (!is_null($data['summary'])) {
             $this->expires_now();
@@ -129,8 +123,6 @@ class Leaves extends CI_Controller {
         $data['leave']['status_label'] = $this->status_model->get_label($data['leave']['status']);
         $data['leave']['type_label'] = $this->types_model->get_label($data['leave']['type']);
         $data['title'] = lang('leaves_view_html_title');
-        $this->load->model('users_model');
-        $data['name'] = $this->users_model->get_label($data['leave']['employee']);
         $this->load->view('templates/header', $data);
         $this->load->view('menu/index', $data);
         $this->load->view('leaves/view', $data);
@@ -148,6 +140,8 @@ class Leaves extends CI_Controller {
         $this->load->helper('form');
         $this->load->library('form_validation');
         $data['title'] = lang('leaves_create_title');
+        $this->load->model('types_model');
+        $data['types'] = $this->types_model->get_types();
         
         $this->form_validation->set_rules('startdate', lang('leaves_create_field_start'), 'required|xss_clean');
         $this->form_validation->set_rules('startdatetype', 'Start Date type', 'required|xss_clean');
@@ -158,16 +152,7 @@ class Leaves extends CI_Controller {
         $this->form_validation->set_rules('cause', lang('leaves_create_field_cause'), 'xss_clean');
         $this->form_validation->set_rules('status', lang('leaves_create_field_status'), 'required|xss_clean');
 
-        $data['credit'] = 0;
         if ($this->form_validation->run() === FALSE) {
-            $this->load->model('types_model');
-            $data['types'] = $this->types_model->get_types();
-            foreach ($data['types'] as $type) {
-                if ($type['id'] == 0) {
-                    $data['credit'] = $this->leaves_model->get_user_leaves_credit($this->user_id, $type['name']);
-                    break;
-                }
-            }
             $this->load->view('templates/header', $data);
             $this->load->view('menu/index', $data);
             $this->load->view('leaves/create');
@@ -216,15 +201,8 @@ class Leaves extends CI_Controller {
         $data['title'] = lang('leaves_edit_html_title');
         $data['id'] = $id;
         
-        $data['credit'] = 0;
         $this->load->model('types_model');  
         $data['types'] = $this->types_model->get_types();
-        foreach ($data['types'] as $type) {
-            if ($type['id'] == $data['leave']['type']) {
-                $data['credit'] = $this->leaves_model->get_user_leaves_credit($data['leave']['employee'], $type['name']);
-                break;
-            }
-        }
         
         $this->form_validation->set_rules('startdate', lang('leaves_edit_field_start'), 'required|xss_clean');
         $this->form_validation->set_rules('startdatetype', 'Start Date type', 'required|xss_clean');
@@ -236,8 +214,6 @@ class Leaves extends CI_Controller {
         $this->form_validation->set_rules('status', lang('leaves_edit_field_status'), 'required|xss_clean');
 
         if ($this->form_validation->run() === FALSE) {
-            $this->load->model('users_model');
-            $data['name'] = $this->users_model->get_label($data['leave']['employee']);
             $this->load->view('templates/header', $data);
             $this->load->view('menu/index', $data);
             $this->load->view('leaves/edit', $data);
@@ -272,6 +248,10 @@ class Leaves extends CI_Controller {
         if (empty($manager['email'])) {
             $this->session->set_flashdata('msg', lang('leaves_create_flash_msg_error'));
         } else {
+            $acceptUrl = base_url() . 'requests/accept/' . $id;
+            $rejectUrl = base_url() . 'requests/reject/' . $id;
+            $detailUrl = base_url() . 'requests';
+
             //Send an e-mail to the manager
             $this->load->library('email');
             $this->load->library('polyglot');
@@ -293,26 +273,22 @@ class Leaves extends CI_Controller {
                 'EndDate' => $enddate,
                 'Type' => $this->types_model->get_label($this->input->post('type')),
                 'Reason' => $this->input->post('cause'),
-                'BaseUrl' => $this->config->base_url(),
-                'LeaveId' => $id,
-                'UserId' => $this->user_id
+                'UrlAccept' => $acceptUrl,
+                'UrlReject' => $rejectUrl,
+                'UrlDetails' => $detailUrl
             );
             $message = $this->parser->parse('emails/' . $manager['language'] . '/request', $data, TRUE);
             if ($this->email->mailer_engine == 'phpmailer') {
                 $this->email->phpmailer->Encoding = 'quoted-printable';
             }
+
             if ($this->config->item('from_mail') != FALSE && $this->config->item('from_name') != FALSE ) {
                 $this->email->from($this->config->item('from_mail'), $this->config->item('from_name'));
             } else {
                $this->email->from('do.not@reply.me', 'LMS');
             }
             $this->email->to($manager['email']);
-            if ($this->config->item('subject_prefix') != FALSE) {
-                $subject = $this->config->item('subject_prefix');
-            } else {
-               $subject = '[Jorani] ';
-            }
-            $this->email->subject($subject . lang('email_leave_request_subject') .
+            $this->email->subject(lang('email_leave_request_subject') .
                     $this->session->userdata('firstname') . ' ' .
                     $this->session->userdata('lastname'));
             $this->email->message($message);
@@ -357,6 +333,23 @@ class Leaves extends CI_Controller {
             redirect('leaves');
         }
     }
+    
+    /**
+     * Ajax endpoint : Try to calculate the length of the leave
+     * @author Benjamin BALET <benjamin.balet@gmail.com>
+     */
+    public function length() {
+        $user_id = $this->input->post('user_id', TRUE);
+        $start = $this->input->post('start', TRUE);
+        $end = $this->input->post('end', TRUE);
+        if (isset($user_id) && isset($start) && isset($end)) {
+            $this->expires_now();
+            $this->output->set_content_type('text/plain');
+            echo $this->leaves_model->length($user_id, $start, $end);
+        } else {
+            $this->output->set_header("HTTP/1.1 422 Unprocessable entity");
+        }
+    }
 
     /**
      * Action: export the list of all leaves into an Excel file
@@ -373,7 +366,7 @@ class Leaves extends CI_Controller {
         $this->excel->getActiveSheet()->setCellValue('D1', lang('leaves_export_thead_end_date'));
         $this->excel->getActiveSheet()->setCellValue('E1', lang('leaves_export_thead_end_date_type'));
         $this->excel->getActiveSheet()->setCellValue('F1', lang('leaves_export_thead_cause'));
-        $this->excel->getActiveSheet()->setCellValue('G1', lang('leaves_export_thead_duration'));
+        $this->excel->getActiveSheet()->setCellValue('G1', lang('leaves_export_thead_duration').'(en jours)');
         $this->excel->getActiveSheet()->setCellValue('H1', lang('leaves_export_thead_type'));
         $this->excel->getActiveSheet()->setCellValue('I1', lang('leaves_export_thead_status'));
         $this->excel->getActiveSheet()->getStyle('A1:I1')->getFont()->setBold(true);
@@ -390,9 +383,9 @@ class Leaves extends CI_Controller {
             $this->excel->getActiveSheet()->setCellValue('C' . $line, $leave['startdatetype']);
             $this->excel->getActiveSheet()->setCellValue('D' . $line, $leave['enddate']);
             $this->excel->getActiveSheet()->setCellValue('E' . $line, $leave['enddatetype']);
-            $this->excel->getActiveSheet()->setCellValue('F' . $line, $leave['duration']);
-            $this->excel->getActiveSheet()->setCellValue('G' . $line, $this->types_model->get_label($leave['type']));
-            $this->excel->getActiveSheet()->setCellValue('H' . $line, $leave['cause']);
+			$this->excel->getActiveSheet()->setCellValue('F' . $line, $leave['cause']);
+            $this->excel->getActiveSheet()->setCellValue('G' . $line, $leave['duration']);
+            $this->excel->getActiveSheet()->setCellValue('H' . $line, $this->types_model->get_label($leave['type']));
             $this->excel->getActiveSheet()->setCellValue('I' . $line, $this->status_model->get_label($leave['status']));
             $line++;
         }
@@ -466,33 +459,42 @@ class Leaves extends CI_Controller {
     }
     
     /**
-     * Ajax endpoint. Result varies according to input :
-     *  - difference between the entitled and the taken days
-     *  - try to calculate the duration of the leave
-     *  - try to detect overlapping leave requests
+     * Ajax endpoint : difference between the entitled and the taken days
      */
-    public function validate() {
+    public function credit() {
         $this->expires_now();
         header("Content-Type: application/json");
-        $id = $this->input->post('id', TRUE);
-        $type = $this->input->post('type', TRUE);
-        $startdate = $this->input->post('startdate', TRUE);
-        $enddate = $this->input->post('enddate', TRUE);
-        $startdatetype = $this->input->post('startdatetype', TRUE);
-        $enddatetype = $this->input->post('enddatetype', TRUE);
-        $leaveValidator = new stdClass;
-        if (isset($id) && isset($type)) {
-            $leaveValidator->credit = $this->leaves_model->get_user_leaves_credit($id, $type);
-        }
-        if (isset($id) && isset($startdate) && isset($enddate)) {
-            $leaveValidator->length = $this->leaves_model->length($id, $startdate, $enddate);
-            if (isset($startdatetype) && isset($enddatetype)) {
-                $leaveValidator->overlap = $this->leaves_model->detect_overlapping_leaves($id, $startdate, $enddate, $startdatetype, $enddatetype);
-            }
-        }
-        echo json_encode($leaveValidator);
+        echo $this->leaves_model->get_user_leaves_credit(
+                $this->input->post('id'),
+                $this->input->post('type'));
     }
-       
+    
+    /**
+     * Prepares a 2 dimensions array
+     * TODO : to be implemented into v0.2.1
+     * @param int $id identifier of the entity
+     * @author Benjamin BALET <benjamin.balet@gmail.com>
+     */
+    public function tabular($id=0, $month=0, $year=0) {
+        $this->auth->check_is_granted('organization_calendar');
+        
+        //date('M Y');
+        //where DAY(date) and MONTH(date) + order by
+        //$num = cal_days_in_month(CAL_GREGORIAN, 8, 2003);
+        //Itération between 2 dates
+        /*while ($iDateFrom<$iDateTo)
+        {
+            $iDateFrom+=86400; // add 24 hours
+            array_push($aryRange,date('Y-m-d',$iDateFrom));
+        }*/
+        $data = $this->getUserContext();
+        $data['title'] = lang('calendar_organization_title');
+        $this->load->view('templates/header', $data);
+        $this->load->view('menu/index', $data);
+        $this->load->view('calendar/tabular', $data);
+        $this->load->view('templates/footer');
+    }
+    
     /**
      * Internal utility function
      * make sure a resource is reloaded every time
