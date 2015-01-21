@@ -129,8 +129,6 @@ class Leaves extends CI_Controller {
         $data['leave']['status_label'] = $this->status_model->get_label($data['leave']['status']);
         $data['leave']['type_label'] = $this->types_model->get_label($data['leave']['type']);
         $data['title'] = lang('leaves_view_html_title');
-        $this->load->model('users_model');
-        $data['name'] = $this->users_model->get_label($data['leave']['employee']);
         $this->load->view('templates/header', $data);
         $this->load->view('menu/index', $data);
         $this->load->view('leaves/view', $data);
@@ -236,8 +234,6 @@ class Leaves extends CI_Controller {
         $this->form_validation->set_rules('status', lang('leaves_edit_field_status'), 'required|xss_clean');
 
         if ($this->form_validation->run() === FALSE) {
-            $this->load->model('users_model');
-            $data['name'] = $this->users_model->get_label($data['leave']['employee']);
             $this->load->view('templates/header', $data);
             $this->load->view('menu/index', $data);
             $this->load->view('leaves/edit', $data);
@@ -272,6 +268,10 @@ class Leaves extends CI_Controller {
         if (empty($manager['email'])) {
             $this->session->set_flashdata('msg', lang('leaves_create_flash_msg_error'));
         } else {
+            $acceptUrl = base_url() . 'requests/accept/' . $id;
+            $rejectUrl = base_url() . 'requests/reject/' . $id;
+            $detailUrl = base_url() . 'requests';
+
             //Send an e-mail to the manager
             $this->load->library('email');
             $this->load->library('polyglot');
@@ -293,26 +293,22 @@ class Leaves extends CI_Controller {
                 'EndDate' => $enddate,
                 'Type' => $this->types_model->get_label($this->input->post('type')),
                 'Reason' => $this->input->post('cause'),
-                'BaseUrl' => $this->config->base_url(),
-                'LeaveId' => $id,
-                'UserId' => $this->user_id
+                'UrlAccept' => $acceptUrl,
+                'UrlReject' => $rejectUrl,
+                'UrlDetails' => $detailUrl
             );
             $message = $this->parser->parse('emails/' . $manager['language'] . '/request', $data, TRUE);
             if ($this->email->mailer_engine == 'phpmailer') {
                 $this->email->phpmailer->Encoding = 'quoted-printable';
             }
+
             if ($this->config->item('from_mail') != FALSE && $this->config->item('from_name') != FALSE ) {
                 $this->email->from($this->config->item('from_mail'), $this->config->item('from_name'));
             } else {
                $this->email->from('do.not@reply.me', 'LMS');
             }
             $this->email->to($manager['email']);
-            if ($this->config->item('subject_prefix') != FALSE) {
-                $subject = $this->config->item('subject_prefix');
-            } else {
-               $subject = '[Jorani] ';
-            }
-            $this->email->subject($subject . lang('email_leave_request_subject') .
+            $this->email->subject(lang('email_leave_request_subject') .
                     $this->session->userdata('firstname') . ' ' .
                     $this->session->userdata('lastname'));
             $this->email->message($message);
@@ -390,9 +386,9 @@ class Leaves extends CI_Controller {
             $this->excel->getActiveSheet()->setCellValue('C' . $line, $leave['startdatetype']);
             $this->excel->getActiveSheet()->setCellValue('D' . $line, $leave['enddate']);
             $this->excel->getActiveSheet()->setCellValue('E' . $line, $leave['enddatetype']);
-            $this->excel->getActiveSheet()->setCellValue('F' . $line, $leave['duration']);
-            $this->excel->getActiveSheet()->setCellValue('G' . $line, $this->types_model->get_label($leave['type']));
-            $this->excel->getActiveSheet()->setCellValue('H' . $line, $leave['cause']);
+			$this->excel->getActiveSheet()->setCellValue('F' . $line, $leave['cause']);
+            $this->excel->getActiveSheet()->setCellValue('G' . $line, $leave['duration']);
+            $this->excel->getActiveSheet()->setCellValue('H' . $line, $this->types_model->get_label($leave['type']));
             $this->excel->getActiveSheet()->setCellValue('I' . $line, $this->status_model->get_label($leave['status']));
             $line++;
         }
