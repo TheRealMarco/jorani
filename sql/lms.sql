@@ -605,6 +605,34 @@ CREATE TABLE IF NOT EXISTS `users_history` (
   KEY `modified_date` (`modified_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
 
+DROP TABLE IF EXISTS recuperation;
+CREATE TABLE recuperation(
+id INT(11) NOT NULL AUTO_INCREMENT,
+employee INT(11) NOT NULL,
+date date NOT NULL,
+heureDebut time NOT NULL,
+heureFin time NOT NULL,
+duration decimal(10,2) NOT NULL,
+status INT(11) NOT NULL,
+PRIMARY KEY (id)
+);
+
+DROP TABLE IF EXISTS recuperation_history;
+CREATE TABLE recuperation_history(
+id INT(11) NOT NULL,
+employee INT(11) NOT NULL,
+date date NOT NULL,
+heureDebut time NOT NULL,
+heureFin time NOT NULL,
+duration decimal(10,2) NOT NULL,
+status INT(11) NOT NULL,
+modification_id int(11) NOT NULL AUTO_INCREMENT,
+modification_type int(11) NOT NULL,
+modified_by int(11) NOT NULL,
+modified_date TIMESTAMP,
+PRIMARY KEY (modification_id)
+);
+
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
