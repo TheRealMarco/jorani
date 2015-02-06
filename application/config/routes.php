@@ -38,6 +38,30 @@
 |
 */
 
+// Ajout
+/* PDF */
+$route['leaves/pdf_myleave'] = 'leaves/pdf_myleave';
+$route['leaves/pdf_myleaves'] = 'leaves/pdf_myleaves';
+$route['recuperation/pdf_myrecuperation/(:num)'] = 'recuperation/pdf_myrecuperation/$1';
+
+/* Recuperation Heures supp' */
+$route['recuperation/create'] = 'recuperation/create';
+$route['recuperation/index'] = 'recuperation/index';
+$route['recuperation/view'] = 'recuperation/view';
+$route['recuperation'] = 'recuperation';
+$route['recuperation/export'] = 'recuperation/export';
+$route['recuperation/view/(:num)'] = 'recuperation/view/$1';
+$route['recuperation/delete/(:num)'] = 'recuperation/delete/$1';
+$route['recuperation/(:num)'] = 'recuperation/view/$1';
+$route['recuperation/bilan'] = 'recuperation/bilan';
+
+/*validation recuperations*/
+$route['recuperations/export/(:any)'] = 'recuperations/export/$1';
+$route['recuperations/accept/(:num)'] = 'recuperations/accept/$1';
+$route['recuperations/reject/(:num)'] = 'recuperations/reject/$1';
+$route['recuperations/(:any)'] = 'recuperations/index/$1';
+$route['recuperations'] = 'recuperations/index/requested';
+
 //Admin : user management
 $route['users/myprofile'] = 'users/myprofile';
 $route['users/pdf_myprofile'] = 'users/pdf_myprofile';
@@ -68,7 +92,6 @@ $route['hr/leaves/(:num)'] = 'hr/leaves/$1';
 $route['hr/leaves/export/(:num)'] = 'hr/export_leaves/$1';
 $route['hr/overtime/(:num)'] = 'hr/overtime/$1';
 $route['hr/counters/(:num)'] = 'hr/counters/$1';
-$route['hr/counters/(:num)/(:num)'] = 'hr/counters/$1/$2';
 $route['hr/overtime/export/(:num)'] = 'hr/export_overtime/$1';
 $route['hr/entitleddays/(:num)'] = 'hr/entitleddays/$1';
 $route['hr'] = 'hr';
@@ -137,20 +160,19 @@ $route['leaves/organization/(:num)'] = 'leaves/organization/$1';
 
 //My leave requests
 $route['leaves/counters'] = 'leaves/counters';
-$route['leaves/counters/(:num)'] = 'leaves/counters/$1';
 $route['leaves/export'] = 'leaves/export';
 $route['leaves/create'] = 'leaves/create';
+$route['leaves/credit'] = 'leaves/credit';
 $route['leaves/edit/(:num)'] = 'leaves/edit/$1';
 $route['leaves/update'] = 'leaves/update';
 $route['leaves/delete/(:num)'] = 'leaves/delete/$1';
 $route['leaves/(:num)'] = 'leaves/view/$1';
-$route['leaves/validate'] = 'leaves/validate';
+$route['leaves/length'] = 'leaves/length';
 $route['leaves'] = 'leaves';
 
 //leave requests
 $route['requests/collaborators'] = 'requests/collaborators';
 $route['requests/counters/(:num)'] = 'requests/counters/$1';
-$route['requests/counters/(:num)/(:num)'] = 'requests/counters/$1/$2';
 $route['requests/export/(:any)'] = 'requests/export/$1';
 $route['requests/accept/(:num)'] = 'requests/accept/$1';
 $route['requests/reject/(:num)'] = 'requests/reject/$1';
@@ -188,31 +210,15 @@ $route['reports/balance'] = 'reports/balance';
 $route['reports/balance/execute'] = 'reports/balance_execute';
 $route['reports/balance/export'] = 'reports/balance_export';
 
+$route['reports/carried_over'] = 'reports/carried_over';
+$route['reports/carried_over/execute'] = 'reports/carried_over_execute';
+$route['reports/carried_over/export'] = 'reports/carried_over_export';
+
 //Admin: search into the history of modifications
 $route['reports/history'] = 'reports/history';
 $route['reports/history/execute'] = 'reports/history_execute';
 $route['reports/history/export'] = 'reports/history_export';
 $route['reports/history/details/(:num)'] = 'reports/history_details/$1';
-
-//_______________________________________________
-//REST API
-$route['api/token'] = 'api/token';
-$route['api/contracts/(:num)'] = 'api/contracts/$1';
-$route['api/contracts'] = 'api/contracts';
-$route['api/entitleddayscontract/(:num)'] = 'api/entitleddayscontract/$1';
-$route['api/addentitleddayscontract/(:num)'] = 'api/addentitleddayscontract/$1';
-$route['api/entitleddaysemployee/(:num)'] = 'api/entitleddaysemployee/$1';
-$route['api/addentitleddaysemployee/(:num)'] = 'api/addentitleddaysemployee/$1';
-$route['api/leavessummary/(:num)/(:num)'] = 'api/leavessummary/$1/$2';
-$route['api/leavessummary/(:num)'] = 'api/leavessummary/$1';
-$route['api/leaves/(:num)/(:num)'] = 'api/leaves/$1/$2';
-$route['api/leavetypes'] = 'api/leavetypes';
-$route['api/positions'] = 'api/positions';
-$route['api/userdepartment/(:num)'] = 'api/userdepartment/$1';
-$route['api/userextras/(:num)'] = 'api/userextras/$1';
-$route['api/userleaves/(:num)'] = 'api/userleaves/$1';
-$route['api/users/(:num)'] = 'api/users/$1';
-$route['api/users'] = 'api/users';
 
 //Session management
 $route['session/login'] = 'session/login';
